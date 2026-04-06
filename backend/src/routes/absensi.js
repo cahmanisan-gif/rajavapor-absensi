@@ -44,9 +44,37 @@ function wibNow() {
 }
 
 // ══════════════════════════════════════════
+// POST /api/absensi/clock — unified endpoint (untuk APK)
+// Body: multipart — foto, lat, lng, accuracy, tipe (masuk/pulang), barcode, cabang_id
+// ══════════════════════════════════════════
+router.post('/clock', auth(), (req, res, next) => {
+  upload.single('foto')(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const tipe = req.body.tipe || 'masuk';
+    if (!['masuk', 'pulang'].includes(tipe)) return res.status(400).json({ success: false, message: 'tipe harus masuk atau pulang.' });
+    req._clockTipe = tipe;
+    req._barcode   = req.body.barcode || null;
+    if (tipe === 'masuk') return await clockInHandler(req, res);
+    return await clockOutHandler(req, res);
+  } catch (e) {
+    console.error('clock error:', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ══════════════════════════════════════════
 // POST /api/absensi/clock-in
 // ══════════════════════════════════════════
 router.post('/clock-in', auth(), upload.single('foto'), async (req, res) => {
+  req._clockTipe = 'masuk';
+  return clockInHandler(req, res);
+});
+
+async function clockInHandler(req, res) {
   try {
     const s = await getSettings();
     const wib = wibNow();
@@ -155,12 +183,17 @@ router.post('/clock-in', auth(), upload.single('foto'), async (req, res) => {
     console.error('clock-in error:', e);
     res.status(500).json({ success: false, message: e.message });
   }
+}
+
+// ══════════════════════════════════════════
+// POST /api/absensi/clock-out
+// ══════════════════════════════════════════
+router.post('/clock-out', auth(), upload.single('foto'), async (req, res) => {
+  req._clockTipe = 'pulang';
+  return clockOutHandler(req, res);
 });
 
-// ═══════════════════════��══════════════════
-// POST /api/absensi/clock-out
-// ═══���══════════════��═══════════════════════
-router.post('/clock-out', auth(), upload.single('foto'), async (req, res) => {
+async function clockOutHandler(req, res) {
   try {
     const s = await getSettings();
     const wib = wibNow();
@@ -270,7 +303,7 @@ router.post('/clock-out', auth(), upload.single('foto'), async (req, res) => {
     console.error('clock-out error:', e);
     res.status(500).json({ success: false, message: e.message });
   }
-});
+}
 
 // ══════════════════════════════════════════
 // GET /api/absensi/status — status hari ini
@@ -316,12 +349,18 @@ router.get('/status', auth(), async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-// ═════���════════════════════════════════════
-// GET /api/absensi/riwayat?bulan=YYYY-MM
+// ══════════════════════════════════════════
+// GET /api/absensi/riwayat?bulan=YYYY-MM atau ?bulan=MM&tahun=YYYY
 // ══════════════════════════════════════════
 router.get('/riwayat', auth(), async (req, res) => {
   try {
-    const bulan = req.query.bulan || wibNow().date.slice(0, 7);
+    // Support: ?bulan=YYYY-MM (full) atau ?bulan=3&tahun=2026 (separate)
+    let bulan;
+    if (req.query.tahun && req.query.bulan && req.query.bulan.length <= 2) {
+      bulan = `${req.query.tahun}-${String(req.query.bulan).padStart(2, '0')}`;
+    } else {
+      bulan = req.query.bulan || wibNow().date.slice(0, 7);
+    }
     const userId = req.query.user_id || req.user.id;
 
     // Hanya owner/manajer boleh lihat riwayat user lain
