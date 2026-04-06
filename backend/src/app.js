@@ -36,6 +36,7 @@ app.use('/api/absensi',  require('./routes/absensi'));
 app.use('/api/rekap',    require('./routes/rekap'));
 app.use('/api/izin',     require('./routes/izin'));
 app.use('/api/admin',    require('./routes/admin'));
+app.use('/api/face',     require('./routes/face'));
 
 app.get('/api/ping', (req, res) => res.json({ success: true, message: 'Absensi Raja Vapor aktif!' }));
 
