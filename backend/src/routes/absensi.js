@@ -136,11 +136,13 @@ router.post('/clock-in', auth(), upload.single('foto'), async (req, res) => {
     );
 
     // 8. Sinkron ke absensi_hari_ini (untuk kompatibilitas payroll & gate transaksi POS)
+    const [[_u]] = await db.query('SELECT personnel_id FROM users WHERE id=?', [userId]);
+    const _pid = _u?.personnel_id || 0;
     await db.query(
       `INSERT INTO absensi_hari_ini (user_id, personnel_id, tanggal, clock_in, status)
-       VALUES (?, (SELECT personnel_id FROM users WHERE id=?), ?, ?, 'hadir')
+       VALUES (?, ?, ?, ?, 'hadir')
        ON DUPLICATE KEY UPDATE clock_in=VALUES(clock_in), status='hadir'`,
-      [userId, userId, today, wib.time]
+      [userId, _pid, today, wib.time]
     );
 
     res.json({
@@ -248,9 +250,14 @@ router.post('/clock-out', auth(), upload.single('foto'), async (req, res) => {
     );
 
     // 8. Sinkron ke absensi_hari_ini
+    const [[_u2]] = await db.query('SELECT personnel_id FROM users WHERE id=?', [userId]);
+    const _pid2 = _u2?.personnel_id || 0;
+    // Insert dulu jika belum ada (edge case: clock-out tanpa clock-in di tabel lama)
     await db.query(
-      `UPDATE absensi_hari_ini SET clock_out=?, status='pulang' WHERE user_id=? AND tanggal=?`,
-      [wib.time, userId, today]
+      `INSERT INTO absensi_hari_ini (user_id, personnel_id, tanggal, clock_out, status)
+       VALUES (?, ?, ?, ?, 'pulang')
+       ON DUPLICATE KEY UPDATE clock_out=VALUES(clock_out), status='pulang'`,
+      [userId, _pid2, today, wib.time]
     );
 
     res.json({
