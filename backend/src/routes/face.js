@@ -177,6 +177,109 @@ router.post('/register', auth(), upload.single('foto'), async (req, res) => {
 });
 
 // ══════════════════════════════════════════
+// POST /api/face/register-bulk — bulk upload foto wajah
+// Auth: owner/admin
+// Body JSON: { users: [{ user_id, foto_base64 }] }
+// ══════════════════════════════════════════
+router.post('/register-bulk', auth(['owner', 'admin_pusat', 'head_operational', 'manajer']), async (req, res) => {
+  try {
+    const { users } = req.body;
+    if (!Array.isArray(users) || !users.length) {
+      return res.status(400).json({ success: false, message: 'Array users wajib diisi.' });
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+    const errors = [];
+
+    for (const item of users) {
+      try {
+        const userId = parseInt(item.user_id);
+        if (!userId || !item.foto_base64) {
+          failedCount++;
+          errors.push({ user_id: item.user_id, error: 'user_id atau foto_base64 kosong' });
+          continue;
+        }
+
+        // Decode base64 — strip data URI prefix if present
+        let b64 = item.foto_base64;
+        if (b64.includes(',')) b64 = b64.split(',')[1];
+        const buffer = Buffer.from(b64, 'base64');
+
+        // Compress & save as WebP 480x480
+        const filename = `face_${userId}_${Date.now()}.webp`;
+        const destPath = path.join(UPLOAD_DIR, filename);
+        await sharp(buffer)
+          .resize(480, 480, { fit: 'cover', position: 'centre' })
+          .webp({ quality: 80 })
+          .toFile(destPath);
+        const fotoUrl = 'face/' + filename;
+
+        // Hapus foto lama
+        const [[old]] = await db.query('SELECT foto_url FROM face_photo WHERE user_id=? AND is_primary=1', [userId]);
+        if (old?.foto_url) {
+          const oldPath = path.join(process.env.UPLOAD_PATH || '/var/www/rajavapor-absensi/uploads', old.foto_url);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+
+        // Upsert face_photo
+        await db.query(`INSERT INTO face_photo (user_id, foto_url, is_primary)
+          VALUES (?, ?, 1)
+          ON DUPLICATE KEY UPDATE foto_url=VALUES(foto_url)`, [userId, fotoUrl]);
+
+        successCount++;
+      } catch (itemErr) {
+        failedCount++;
+        errors.push({ user_id: item.user_id, error: itemErr.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Bulk register selesai: ${successCount} berhasil, ${failedCount} gagal.`,
+      data: { success: successCount, failed: failedCount, errors: errors.length ? errors : undefined }
+    });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ══════════════════════════════════════════
+// GET /api/face/status?cabang_id=X — status foto wajah per user di cabang
+// ══════════════════════════════════════════
+router.get('/status', async (req, res) => {
+  try {
+    const cabangId = parseInt(req.query.cabang_id);
+    if (!cabangId) return res.status(400).json({ success: false, message: 'cabang_id wajib.' });
+
+    const [rows] = await db.query(`
+      SELECT u.id as user_id, u.nama_lengkap, u.username, u.role,
+             CASE WHEN fp.foto_url IS NOT NULL THEN 1 ELSE 0 END as has_photo,
+             fp.foto_url
+      FROM users u
+      LEFT JOIN face_photo fp ON fp.user_id = u.id AND fp.is_primary = 1
+      WHERE u.aktif = 1 AND u.cabang_id = ?
+        AND u.role IN ('kasir','kasir_sales','vaporista','kepala_cabang')
+      ORDER BY u.nama_lengkap`, [cabangId]);
+
+    const total = rows.length;
+    const withPhoto = rows.filter(r => r.has_photo).length;
+    const withoutPhoto = total - withPhoto;
+
+    res.json({
+      success: true,
+      data: rows.map(r => ({
+        user_id: r.user_id,
+        nama_lengkap: r.nama_lengkap,
+        username: r.username,
+        role: r.role,
+        has_photo: !!r.has_photo,
+        foto_url: r.foto_url ? '/uploads/' + r.foto_url : null
+      })),
+      summary: { total, with_photo: withPhoto, without_photo: withoutPhoto }
+    });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ══════════════════════════════════════════
 // GET /api/face/cabang — daftar cabang aktif (untuk pilih cabang di APK)
 // ══════════════════════════════════════════
 router.get('/cabang', async (req, res) => {
