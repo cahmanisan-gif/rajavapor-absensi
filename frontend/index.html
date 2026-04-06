@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1e40af">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Absensi — Raja Vapor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>⏰</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#1e40af;--primary-light:#3b82f6;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--gray:#6b7280;--bg:#f1f5f9;--card:#fff;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:#1e293b;min-height:100vh;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.hidden{display:none!important}
+
+/* ── LOGIN ── */
+#pg-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(135deg,#1e3a8a,#3b82f6)}
+#pg-login .logo{font-size:48px;margin-bottom:8px}
+#pg-login h1{color:#fff;font-size:22px;margin-bottom:4px}
+#pg-login .sub{color:#bfdbfe;font-size:13px;margin-bottom:32px}
+#pg-login .form{background:#fff;border-radius:var(--radius);padding:28px 24px;width:100%;max-width:360px;box-shadow:var(--shadow)}
+#pg-login input{width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;margin-bottom:14px;outline:none;transition:.2s}
+#pg-login input:focus{border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+#pg-login button{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer}
+#pg-login .err{color:var(--red);font-size:13px;margin-bottom:10px;text-align:center}
+
+/* ── HEADER ── */
+.header{background:var(--primary);color:#fff;padding:16px 20px 14px;position:sticky;top:0;z-index:100}
+.header h2{font-size:17px;font-weight:700}
+.header .info{font-size:12px;opacity:.8;margin-top:2px}
+.header .logout{position:absolute;right:16px;top:18px;background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer}
+
+/* ── STATUS CARD ── */
+.status-card{margin:16px;padding:24px 20px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);text-align:center}
+.status-card .icon{font-size:56px;margin-bottom:8px}
+.status-card .label{font-size:14px;color:var(--gray);margin-bottom:4px}
+.status-card .value{font-size:20px;font-weight:700}
+.status-card .times{display:flex;justify-content:center;gap:24px;margin-top:16px;font-size:13px;color:var(--gray)}
+.status-card .times b{color:#1e293b;font-size:15px;display:block}
+
+/* ── CLOCK BUTTON ── */
+.clock-area{margin:0 16px 16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.btn-clock{width:100%;max-width:400px;padding:18px;border:none;border-radius:var(--radius);font-size:17px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .1s}
+.btn-clock:active{transform:scale(.97)}
+.btn-clock.masuk{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.btn-clock.pulang{background:linear-gradient(135deg,#ea580c,#f97316)}
+.btn-clock:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── GPS INFO ── */
+.gps-info{margin:0 16px 16px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;color:var(--gray)}
+.gps-info .ok{color:var(--green)}
+.gps-info .bad{color:var(--red)}
+
+/* ── CAMERA ── */
+.camera-area{margin:0 16px 16px;text-align:center}
+.camera-area video,.camera-area canvas{width:100%;max-width:400px;border-radius:var(--radius);background:#000}
+.camera-area .snap-btn{margin-top:10px;padding:10px 32px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.camera-area .retake{margin-left:8px;background:#e2e8f0;color:#475569}
+.preview-img{width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--primary);margin:8px auto;display:block}
+
+/* ── TABS ── */
+.tabs{display:flex;margin:0 16px;gap:4px}
+.tabs button{flex:1;padding:10px;border:none;background:#e2e8f0;color:var(--gray);font-size:13px;font-weight:600;cursor:pointer;border-radius:10px 10px 0 0;transition:.2s}
+.tabs button.active{background:var(--card);color:var(--primary)}
+
+/* ── RIWAYAT ── */
+.riwayat{margin:0 16px 16px;background:var(--card);border-radius:0 0 var(--radius) var(--radius);padding:16px;box-shadow:var(--shadow)}
+.riwayat .item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.riwayat .item:last-child{border-bottom:none}
+.riwayat .item .day{font-size:13px;font-weight:700;width:40px;text-align:center;color:var(--primary)}
+.riwayat .item .detail{flex:1;font-size:13px;color:var(--gray)}
+.riwayat .item .detail b{color:#1e293b}
+.riwayat .item .badge{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff}
+.badge.hadir{background:var(--green)}.badge.pulang{background:var(--primary-light)}.badge.alpha{background:var(--red)}.badge.izin,.badge.sakit,.badge.cuti{background:var(--orange)}
+
+/* ── LOADING ── */
+.loading{text-align:center;padding:40px;color:var(--gray)}
+.spinner{width:32px;height:32px;border:3px solid #e2e8f0;border-top:3px solid var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+.toast.ok{background:var(--green)}
+
+/* ── NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid #e2e8f0;display:flex;padding:6px 0 env(safe-area-inset-bottom,8px);z-index:100}
+.bottom-nav button{flex:1;border:none;background:none;padding:6px 0;font-size:10px;color:var(--gray);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.bottom-nav button.active{color:var(--primary)}
+.bottom-nav svg{width:22px;height:22px}
+
+body{padding-bottom:70px}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ══════ -->
+<div id="pg-login">
+  <div class="logo">⏰</div>
+  <h1>Absensi Raja Vapor</h1>
+  <p class="sub">Sistem Absensi Mandiri</p>
+  <div class="form">
+    <div id="login-err" class="err hidden"></div>
+    <input id="inp-user" placeholder="Username" autocomplete="username">
+    <input id="inp-pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button onclick="doLogin()">Masuk</button>
+  </div>
+</div>
+
+<!-- ════ MAIN APP ══════ -->
+<div id="app" class="hidden">
+
+  <div class="header">
+    <h2 id="h-nama">-</h2>
+    <div class="info" id="h-info">-</div>
+    <button class="logout" onclick="logout()">Keluar</button>
+  </div>
+
+  <!-- Page: Absensi -->
+  <div id="pg-absensi">
+    <div class="status-card" id="status-card">
+      <div class="icon" id="sc-icon">...</div>
+      <div class="label" id="sc-label">Memuat...</div>
+      <div class="value" id="sc-value">-</div>
+      <div class="times" id="sc-times"></div>
+    </div>
+
+    <div class="gps-info" id="gps-info">Mencari lokasi GPS...</div>
+
+    <div class="camera-area hidden" id="camera-area">
+      <video id="cam-video" autoplay playsinline muted></video>
+      <canvas id="cam-canvas" class="hidden"></canvas>
+      <img id="cam-preview" class="preview-img hidden">
+      <div>
+        <button class="snap-btn" id="btn-snap" onclick="takeSnap()">Ambil Foto</button>
+        <button class="snap-btn retake hidden" id="btn-retake" onclick="retakeSnap()">Ulangi</button>
+      </div>
+    </div>
+
+    <div class="clock-area" id="clock-area"></div>
+  </div>
+
+  <!-- Page: Riwayat -->
+  <div id="pg-riwayat" class="hidden">
+    <div style="padding:16px 16px 0;display:flex;align-items:center;gap:8px">
+      <input type="month" id="inp-bulan" style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px">
+    </div>
+    <div id="riwayat-list" class="riwayat" style="margin:16px;border-radius:var(--radius)"></div>
+  </div>
+
+  <!-- Page: Izin -->
+  <div id="pg-izin" class="hidden">
+    <div style="padding:16px">
+      <h3 style="font-size:16px;margin-bottom:12px">Ajukan Izin / Sakit / Cuti</h3>
+      <select id="iz-tipe" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:10px;font-size:14px">
+        <option value="izin">Izin</option>
+        <option value="sakit">Sakit</option>
+        <option value="cuti">Cuti</option>
+      </select>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="date" id="iz-dari" style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px">
+        <input type="date" id="iz-sampai" style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px">
+      </div>
+      <textarea id="iz-alasan" placeholder="Alasan..." rows="3" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;resize:none;margin-bottom:12px"></textarea>
+      <button onclick="submitIzin()" style="width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">Kirim Pengajuan</button>
+    </div>
+    <div id="izin-list" style="padding:0 16px 16px"></div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button onclick="showPage('absensi')" id="nav-absensi" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Absensi
+    </button>
+    <button onclick="showPage('riwayat')" id="nav-riwayat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Riwayat
+    </button>
+    <button onclick="showPage('izin')" id="nav-izin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Izin
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = location.origin + '/absensi/api';
+let TOKEN = localStorage.getItem('abs_token');
+let USER  = JSON.parse(localStorage.getItem('abs_user') || 'null');
+let GPS = { lat: null, lng: null, accuracy: null };
+let cameraStream = null;
+let photoBlob = null;
+
+// ══════ AUTH ══════
+async function doLogin() {
+  const u = $('inp-user').value.trim(), p = $('inp-pass').value;
+  if (!u || !p) return showErr('Username dan password wajib diisi.');
+  try {
+    const r = await api('/absensi/../../api/auth/login', 'POST', { username: u, password: p }, true);
+    if (!r.success) return showErr(r.message);
+    TOKEN = r.token; USER = r.user;
+    localStorage.setItem('abs_token', TOKEN);
+    localStorage.setItem('abs_user', JSON.stringify(USER));
+    initApp();
+  } catch (e) { showErr('Gagal login: ' + e.message); }
+}
+function showErr(m) { $('login-err').textContent = m; $('login-err').classList.remove('hidden'); }
+function logout() { TOKEN = null; USER = null; localStorage.removeItem('abs_token'); localStorage.removeItem('abs_user'); location.reload(); }
+
+// ══════ API HELPER ══════
+async function api(path, method = 'GET', body, noAuth) {
+  const opts = { method, headers: {} };
+  if (!noAuth && TOKEN) opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+  if (body && !(body instanceof FormData)) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  } else if (body instanceof FormData) {
+    opts.body = body;
+  }
+  // Login endpoint: panggil ke main API via nginx (port 443/80)
+  let url = API + path;
+  if (path.includes('auth/login')) {
+    url = location.origin + '/api/auth/login';
+  }
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// ══════ INIT ══════
+function initApp() {
+  if (!TOKEN || !USER) { $('pg-login').classList.remove('hidden'); $('app').classList.add('hidden'); return; }
+  $('pg-login').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('h-nama').textContent = USER.nama_lengkap || USER.username;
+  $('h-info').textContent = (USER.role || '') + (USER.nama_cabang ? ' — ' + USER.nama_cabang : '');
+  initGPS();
+  loadStatus();
+  $('inp-bulan').value = wibDate().slice(0, 7);
+  $('inp-bulan').onchange = () => loadRiwayat();
+  const today = wibDate();
+  $('iz-dari').value = today;
+  $('iz-sampai').value = today;
+}
+
+// ══════ GPS ══════
+function initGPS() {
+  if (!navigator.geolocation) { $('gps-info').innerHTML = '<span class="bad">GPS tidak didukung di perangkat ini.</span>'; return; }
+  navigator.geolocation.watchPosition(
+    pos => {
+      GPS.lat = pos.coords.latitude;
+      GPS.lng = pos.coords.longitude;
+      GPS.accuracy = pos.coords.accuracy;
+      const acc = Math.round(GPS.accuracy);
+      const cls = acc <= 100 ? 'ok' : 'bad';
+      $('gps-info').innerHTML = `Lokasi: <span class="${cls}">${GPS.lat.toFixed(5)}, ${GPS.lng.toFixed(5)} (akurasi ${acc}m)</span>`;
+    },
+    err => { $('gps-info').innerHTML = `<span class="bad">GPS error: ${err.message}. Aktifkan lokasi.</span>`; },
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+  );
+}
+
+// ══════ STATUS ══════
+async function loadStatus() {
+  try {
+    const r = await api('/absensi/status');
+    if (!r.success) return;
+    const d = r.data;
+    const sc = $('status-card');
+    const ca = $('clock-area');
+
+    if (d.status === 'pulang') {
+      $('sc-icon').textContent = '✅';
+      $('sc-label').textContent = 'Shift selesai';
+      $('sc-value').textContent = 'Sudah pulang';
+      $('sc-times').innerHTML = `<div>Masuk<b>${fmtTime(d.clock_in?.waktu)}</b></div><div>Pulang<b>${fmtTime(d.clock_out?.waktu)}</b></div>`;
+      ca.innerHTML = '';
+      stopCamera();
+    } else if (d.status === 'hadir') {
+      $('sc-icon').textContent = '🟢';
+      $('sc-label').textContent = 'Sedang bertugas';
+      $('sc-value').textContent = 'Clock-in: ' + fmtTime(d.clock_in?.waktu);
+      $('sc-times').innerHTML = `<div>Masuk<b>${fmtTime(d.clock_in?.waktu)}</b></div><div>Jarak<b>${d.clock_in?.jarak ?? '-'}m</b></div>`;
+      ca.innerHTML = `<button class="btn-clock pulang" onclick="doClock('out')">Clock Out</button>`;
+      startCamera();
+    } else if (['izin', 'sakit', 'cuti'].includes(d.status)) {
+      $('sc-icon').textContent = '📋';
+      $('sc-label').textContent = d.status.charAt(0).toUpperCase() + d.status.slice(1);
+      $('sc-value').textContent = 'Tidak perlu absen hari ini';
+      $('sc-times').innerHTML = '';
+      ca.innerHTML = '';
+      stopCamera();
+    } else {
+      $('sc-icon').textContent = '⏰';
+      $('sc-label').textContent = 'Belum absen';
+      $('sc-value').textContent = wibTimeStr();
+      $('sc-times').innerHTML = '';
+      ca.innerHTML = `<button class="btn-clock masuk" onclick="doClock('in')">Clock In</button>`;
+      startCamera();
+    }
+  } catch (e) { toast('Gagal memuat status', 'err'); }
+}
+
+// ══════ CLOCK IN/OUT ══════
+async function doClock(type) {
+  const endpoint = type === 'in' ? '/absensi/clock-in' : '/absensi/clock-out';
+  const btn = document.querySelector('.btn-clock');
+  if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+
+  try {
+    if (!photoBlob) { toast('Ambil foto selfie terlebih dahulu.', 'err'); if(btn){btn.disabled=false;btn.textContent=type==='in'?'Clock In':'Clock Out';} return; }
+    if (!GPS.lat || !GPS.lng) { toast('Lokasi GPS belum tersedia. Tunggu sebentar.', 'err'); if(btn){btn.disabled=false;btn.textContent=type==='in'?'Clock In':'Clock Out';} return; }
+
+    const fd = new FormData();
+    fd.append('foto', photoBlob, 'selfie.jpg');
+    fd.append('lat', GPS.lat);
+    fd.append('lng', GPS.lng);
+    fd.append('accuracy', GPS.accuracy);
+    fd.append('cabang_id', USER.cabang_id || '');
+
+    const r = await api(endpoint, 'POST', fd);
+    if (r.success) {
+      toast(r.message, 'ok');
+      photoBlob = null;
+      stopCamera();
+      loadStatus();
+    } else {
+      toast(r.message, 'err');
+      if(btn){btn.disabled=false;btn.textContent=type==='in'?'Clock In':'Clock Out';}
+    }
+  } catch (e) {
+    toast('Gagal: ' + e.message, 'err');
+    if(btn){btn.disabled=false;btn.textContent=type==='in'?'Clock In':'Clock Out';}
+  }
+}
+
+// ══════ CAMERA ══════
+async function startCamera() {
+  const area = $('camera-area');
+  area.classList.remove('hidden');
+  $('cam-preview').classList.add('hidden');
+  $('cam-canvas').classList.add('hidden');
+  $('cam-video').classList.remove('hidden');
+  $('btn-snap').classList.remove('hidden');
+  $('btn-retake').classList.add('hidden');
+  photoBlob = null;
+
+  if (cameraStream) return;
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 480 }, audio: false });
+    $('cam-video').srcObject = cameraStream;
+  } catch (e) { area.innerHTML = `<p style="color:var(--red);padding:16px">Kamera tidak bisa diakses: ${e.message}</p>`; }
+}
+
+function stopCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  $('camera-area').classList.add('hidden');
+}
+
+function takeSnap() {
+  const video = $('cam-video');
+  const canvas = $('cam-canvas');
+  canvas.width = 480; canvas.height = 480;
+  const ctx = canvas.getContext('2d');
+  // Mirror selfie
+  ctx.translate(480, 0); ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, 480, 480);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // Watermark: waktu + koordinat
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.fillRect(0, 440, 480, 40);
+  ctx.fillStyle = '#fff';
+  ctx.font = '13px sans-serif';
+  ctx.fillText(wibTimeStr() + ' WIB | ' + (GPS.lat ? GPS.lat.toFixed(4) + ',' + GPS.lng.toFixed(4) : 'No GPS'), 10, 462);
+
+  canvas.toBlob(blob => {
+    photoBlob = blob;
+    $('cam-preview').src = URL.createObjectURL(blob);
+    $('cam-preview').classList.remove('hidden');
+    $('cam-video').classList.add('hidden');
+    $('btn-snap').classList.add('hidden');
+    $('btn-retake').classList.remove('hidden');
+  }, 'image/jpeg', 0.8);
+}
+
+function retakeSnap() {
+  photoBlob = null;
+  $('cam-preview').classList.add('hidden');
+  $('cam-video').classList.remove('hidden');
+  $('btn-snap').classList.remove('hidden');
+  $('btn-retake').classList.add('hidden');
+}
+
+// ══════ RIWAYAT ══════
+async function loadRiwayat() {
+  const bulan = $('inp-bulan').value;
+  const list = $('riwayat-list');
+  list.innerHTML = '<div class="loading"><div class="spinner"></div>Memuat...</div>';
+  try {
+    const r = await api(`/absensi/riwayat?bulan=${bulan}`);
+    if (!r.success || !r.data.length) { list.innerHTML = '<p style="padding:20px;text-align:center;color:var(--gray)">Belum ada data absensi.</p>'; return; }
+    let html = `<div style="font-size:13px;color:var(--gray);margin-bottom:12px">Hadir: <b style="color:var(--green)">${r.summary.hadir} hari</b></div>`;
+    r.data.forEach(d => {
+      const dt = new Date(d.tanggal + 'T00:00:00');
+      const day = dt.getDate();
+      const masuk = d.masuk ? fmtTime(d.masuk.waktu) : '-';
+      const pulang = d.pulang ? fmtTime(d.pulang.waktu) : '-';
+      const status = d.pulang ? 'pulang' : d.masuk ? 'hadir' : 'alpha';
+      html += `<div class="item">
+        <div class="day">${day}</div>
+        <div class="detail"><b>${masuk}</b> — ${pulang} ${d.masuk?.jarak ? `(${d.masuk.jarak}m)` : ''}</div>
+        <div class="badge ${status}">${status}</div>
+      </div>`;
+    });
+    list.innerHTML = html;
+  } catch (e) { list.innerHTML = `<p style="color:var(--red);padding:16px">Error: ${e.message}</p>`; }
+}
+
+// ══════ IZIN ══════
+async function submitIzin() {
+  const tipe = $('iz-tipe').value;
+  const dari = $('iz-dari').value;
+  const sampai = $('iz-sampai').value;
+  const alasan = $('iz-alasan').value;
+  if (!dari || !sampai) return toast('Tanggal wajib diisi.', 'err');
+  try {
+    const r = await api('/izin', 'POST', { tipe, dari_tanggal: dari, sampai_tanggal: sampai, alasan });
+    if (r.success) { toast(r.message, 'ok'); $('iz-alasan').value = ''; loadIzinList(); }
+    else toast(r.message, 'err');
+  } catch (e) { toast('Gagal: ' + e.message, 'err'); }
+}
+
+async function loadIzinList() {
+  try {
+    const r = await api('/izin');
+    if (!r.success) return;
+    const list = $('izin-list');
+    if (!r.data.length) { list.innerHTML = '<p style="color:var(--gray);text-align:center;padding:16px">Belum ada pengajuan.</p>'; return; }
+    list.innerHTML = r.data.map(iz => {
+      const badge = iz.status === 'approved' ? 'hadir' : iz.status === 'rejected' ? 'alpha' : 'izin';
+      return `<div style="background:var(--card);border-radius:10px;padding:14px;margin-bottom:8px;box-shadow:var(--shadow)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>${iz.tipe.toUpperCase()}</b>
+          <span class="badge ${badge}">${iz.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--gray);margin-top:4px">${iz.dari_tanggal} — ${iz.sampai_tanggal} (${iz.jumlah_hari} hari)</div>
+        <div style="font-size:13px;margin-top:4px">${iz.alasan || '-'}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {}
+}
+
+// ══════ NAV ══════
+function showPage(page) {
+  ['absensi', 'riwayat', 'izin'].forEach(p => {
+    $('pg-' + p).classList.toggle('hidden', p !== page);
+    $('nav-' + p).classList.toggle('active', p === page);
+  });
+  if (page === 'riwayat') loadRiwayat();
+  if (page === 'izin') loadIzinList();
+  if (page === 'absensi') loadStatus();
+}
+
+// ══════ UTILS ══════
+function $(id) { return document.getElementById(id); }
+function fmtTime(t) { return t ? t.slice(0, 5) : '-'; }
+function wibDate() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
+function wibTimeStr() { const d = new Date(Date.now() + 7 * 3600000); return d.toISOString().slice(11, 19); }
+
+function toast(msg, type) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'err' ? ' err' : type === 'ok' ? ' ok' : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// Boot
+initApp();
+
+// Update clock setiap detik jika belum absen
+setInterval(() => {
+  const v = $('sc-value');
+  if (v && v.textContent.match(/^\d{2}:\d{2}/)) v.textContent = wibTimeStr();
+}, 1000);
+</script>
+</body>
+</html>
